@@ -1,0 +1,4 @@
+L0 = 0.0800602 m
+连杆1长度：0.0514982 m	质量：0.05 kg（可以通过dynamic properties窗口自行设置的）
+连杆2长度：0.0723751 m	质量：0.05 kg（可以通过dynamic properties窗口自行设置的）
+连杆3长度：0.1165047 m	质量：0.05 kg（可以通过dynamic properties窗口自行设置的）
