@@ -76,32 +76,31 @@ if (clientID>-1)
     
     vrep.simxSynchronousTrigger(clientID);
     vrep.simxGetPingTime(clientID);
-      
-    % N0 调整机身位姿步数
-    N0 = 10;
-    % N 步数
-    N = 100;
-    % 初始化
-    stepRotate = [0 0 0 0 0 0];
-    stepHeight = 0.03*ones(1,6);
-    stepAmplitude = [0 0 0 0 0 0];
-    num = 0;
-    flag = 1;
-    imageAcquisitionTime = 0;
-    last_imageAcquisitionTime = 0;  
-    lastX = body_position(1);
-    lastY = body_position(2);
-    lastBody_rotate = body_angles(3);
     
+    % 相关参数变量初始化      
+    N0 = 10; % 调整机身位姿步数   
+    N = 100; % 步数
+    stepRotate = [0 0 0 0 0 0];   % 迈步方向 
+    stepHeight = 0.03*ones(1,6);  % 抬腿高度
+    stepAmplitude = [0 0 0 0 0 0];% 迈步步幅
+    num = 0;  % 保存数据的计数值
+    flag = 1; % 行走路径点的标志位
+    imageAcquisitionTime = 0;       % vrep图像获取的时间戳
+    last_imageAcquisitionTime = 0;  % 上个vrep图像获取的时间戳，用于计算帧率
+    lastX = body_position(1);  % 前一时刻机身x坐标
+    lastY = body_position(2);  % 前一时刻机身y坐标
+    lastBody_rotate = body_angles(3); % 前一时刻机身绕z轴旋转角度    
     LegPos_offset = zeros(3,6);
     legpos_offset = zeros(3,6);
     last_LegPos_offset = zeros(3,6);
     Body2Body_T = eye(4);
+    body_height = 0;
+    body_rotatex = 0; % 期望的机身翻滚
+    body_rotatey = 0; % 期望的机身俯仰
     Is_adaptive = 1; % 开启和关闭自适应功能
     %**********************************************************************
-    while(vrep.simxGetConnectionId(clientID) ~= -1)  % while v-rep connection is still active
-        
-        % 六足机器人机身调整N0
+    while(vrep.simxGetConnectionId(clientID) ~= -1)  % while v-rep connection is still active       
+%% 六足机器人机身转动测试
 %         for ishow = 1:5
 %             for j = 1:N0   
 %                 switch ishow
@@ -134,8 +133,7 @@ if (clientID>-1)
 %                 vrep.simxGetPingTime(clientID);            
 %             end
 %         end
-        
-        % 六足机器人机身调整N0  
+%% 六足机器人机身初始化调整          
         for j = 1:N0        
             % 期望机身坐标系相对当前机身坐标系的偏移和旋转
             Body2Body_offset = [0,0,0];
@@ -155,13 +153,13 @@ if (clientID>-1)
             Leg2Body_T{i} = MT.Leg2Body_trans(Leg2Body_offset(i,:),Leg2Body_rot(i,:));
         end
         [~,body_position] = vrep.simxGetObjectPosition(clientID, handle_bodyBase, -1, vrep.simx_opmode_buffer);
-        body_height = body_position(3);
+        body_height = body_position(3); % 机身的离地高度
         % 同步
         vrep.simxSynchronousTrigger(clientID);
         vrep.simxGetPingTime(clientID);   
         
         
-        % 六足机器人步行N步
+%% 六足机器人步行N步
         for j = 1:N
 %             [gait_num, leg_pos] = MT.Three_leg_gait(stepHeight,stepAmplitude,stepRotate);
 %             [gait_num, leg_pos] = MT.Output_track(0.03,0.03,60,3);
@@ -177,7 +175,7 @@ if (clientID>-1)
 %                                                                         lastX,lastY,lastBody_rotate);
 %             [gait_num, leg_pos] = MT.Three_leg_gait(stepHeight,stepAmplitude,stepRotate);
             [gait_num, leg_pos, flag] = walk_path(body_position(1),body_position(2),body_angles(3),lastX,lastY,lastBody_rotate,flag);       
-           
+            % 遍历设计的的足端轨迹并发送给机器人           
             for tt = 1:gait_num
                 for i = 1 : 6
                     % 碰撞检测
@@ -194,8 +192,8 @@ if (clientID>-1)
                     [~, leg_pos, legpos_offset] = MT.Adaptive_gait(gait_num, leg_pos, Is_collision, tt, last_LegPos_offset);
                     % 身体姿态的转换矩阵
                     % 期望机身坐标系相对当前机身坐标系的偏移和旋转
-                    Body2Body_offset = [0,0,body_position(3)-body_height];
-                    Body2Body_rot = [0-body_angles(1),0-body_angles(2),0];
+                    Body2Body_offset = [0,0,body_position(3)-body_height];  % 期望的机身高度body_height
+                    Body2Body_rot = [body_rotatex-body_angles(1),body_rotatey-body_angles(2),0];  % 期望的机身翻滚角度、俯仰角度
                     Body2Body_T = MT.Leg2Body_trans(Body2Body_offset,Body2Body_rot);  
                 end
 
@@ -203,7 +201,7 @@ if (clientID>-1)
                 % 输出足端轨迹
                 for i = 1 : 6
                     vrep.simxSetObjectPosition(clientID, eval(['handle_footTarget',num2str(i)]),handle_bodyBase,Body2Body_T*Leg2Body_T{i}*[leg_pos{i,1}(1,tt);leg_pos{i,1}(2,tt);leg_pos{i,1}(3,tt);1],vrep.simx_opmode_oneshot);              
-                    % 更新补偿值                 
+                    % 如开启自适应，更新补偿值                 
                     if legpos_offset(3,i) ~= 0 && Is_adaptive
                         LegPos_offset(:,i) = legpos_offset(:,i);          
                     end
