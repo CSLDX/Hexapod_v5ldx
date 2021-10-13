@@ -1,12 +1,14 @@
 function MT = MakeTrack
 MT.Generate_track = @Generate_track;
 MT.Generate_track2 = @Generate_track2;
+MT.Generate_track3 = @Generate_track3;
 MT.Output_leg_track = @Output_leg_track;
 % MT.Output_track = @Output_track;
 MT.Three_leg_gait = @Three_leg_gait;
 MT.Four_leg_gait = @Four_leg_gait;
 MT.Five_leg_gait = @Five_leg_gait;
 MT.Adaptive_gait = @Adaptive_gait;
+MT.New_adaptive_gait = @New_adaptive_gait;
 MT.Body2Body_trans = @Trans_Matirx;
 MT.Leg2Body_trans = @Trans_Matirx;
 end
@@ -137,19 +139,59 @@ function [Gait_num, Leg_pos, pos_offset] = Adaptive_gait(Gait_num, Leg_pos, Is_c
     
 end
 
-
+% function [Gait_num, Leg_pos, pos_offset] = New_adaptive_gait(Gait_num, Leg_pos, Is_collision, gait_num, last_pos_offset)
+%     % 标志量常量
+%     ST = 0;
+%     SW_UP = 1;
+%     SW_DOWN = 2;
+%     pos_offset = zeros(3,6);
+%     threshold = 0.001; % 1mm的阈值
+%     for i = 1:6
+%         % 足端提前遇到地面的情况
+%         % 修改当前步态周期的轨迹点
+%         if Is_collision(i) == 1  && Leg_pos{i,1}(4,gait_num) == SW_DOWN && Leg_pos{i,1}(3,gait_num) > threshold 
+%             pos_offset(3,i) = Leg_pos{i,1}(3,gait_num);
+%             pos_offset(2,i) = Leg_pos{i,1}(2,gait_num);
+%             pos_offset(1,i) = Leg_pos{i,1}(1,gait_num);
+%             % 找到第i腿SW_DOWN段最后的一个轨迹点
+%             down_index = find(Leg_pos{i,1}(4,gait_num:end) == SW_DOWN);
+%             end_down_x = Leg_pos{i,1}(1,down_index(end));
+%             end_down_y = Leg_pos{i,1}(2,down_index(end));
+%             % 修改当前步态周期
+%             % 下落段xyz不再改变
+%             Leg_pos{i,1}(1,gait_num:down_index(end)) = pos_offset(1,i);
+%             Leg_pos{i,1}(2,gait_num:down_index(end)) = pos_offset(2,i);
+%             % 后续的支撑段对应平移，z轴始终维持
+%             Leg_pos{i,1}(1,down_index(end):end) = Leg_pos{i,1}(1,down_index(end):end) - (end_down_x - pos_offset(1,i));
+%             Leg_pos{i,1}(2,down_index(end):end) = Leg_pos{i,1}(2,down_index(end):end) - (end_down_y - pos_offset(2,i));
+%             Leg_pos{i,1}(3,gait_num:end) = pos_offset(3,i);            
+%             Leg_pos{i,1}(4,:) = Leg_pos{i,1}(4,:) + 10; % 表示该条轨迹已经改动过了
+%         end
+%         
+%         
+% 
+%     end
+%     
+% end
 
 %% *********************************************************************************************************
 % 内部的功能函数，外部不调用
 %*********************************************************************************************************
 %% 生成具体足端节律轨迹
 function [Gait_num, Leg_pos] = Output_leg_track(stepHeight,stepAmplitude,stepRotate,Gait_flag,Leg)
-    % 标志量常量    
+    % 标志量常量  注意：不同设计的足端轨迹标注的上升段和下降段不一样！！
+    % Generate_track函数生成的轨迹分为支撑相{ST}和摆动相，摆动相中z轴上升的标注为上升段{SW_UP}，z轴下降的标注为下降段{SW_DOWN}
+    % Generate_track2函数生成的轨迹分为支撑相{ST}和摆动相，摆动相中z轴上升，xy轴不动（即垂直上升）的标注为上升段{SW_UP}，同理垂直下降的才标注为下降段{SW_DOWN},其余为摆动段{SW_SW}
     ST = 0;
     SW_UP = 1;
     SW_DOWN = 2;
+    SW_SW = 3;
     % 轨迹生成
-    [Gait_num, Swpos, Stpos] = Generate_track2(stepHeight,stepAmplitude,stepRotate,Gait_flag);
+    track_type = 2;
+    switch track_type
+        case {1}, [Gait_num, Swpos, Stpos] = Generate_track(stepHeight,stepAmplitude,stepRotate,Gait_flag);
+        case {2}, [Gait_num, Swpos, Stpos] = Generate_track2(stepHeight,stepAmplitude,stepRotate,Gait_flag);
+    end
     % SwOrder = [腿1的摆动次序 腿2的摆动次序 腿3的摆动次序 腿4的摆动次序 腿5的摆动次序 腿6的摆动次序];
     switch Gait_flag
         case {3},   SwOrder = [1 2 1 2 1 2];
@@ -167,25 +209,36 @@ function [Gait_num, Leg_pos] = Output_leg_track(stepHeight,stepAmplitude,stepRot
         leg_z = [Swpos(3,:),Stpos(3,:)];
         leg_y = [Swpos(2,:),Stpos(2,:)];
         leg_x = [Swpos(1,:),Stpos(1,:)];
-        pos_state = [SW_UP*ones(1,sum(gradient(Swpos(3,:))>=0)),SW_DOWN*ones(1,sum(gradient(Swpos(3,:))<0)),ST*ones(1,length(Stpos(3,:)))];
+        switch track_type
+            case {1}, pos_state = [SW_UP*ones(1,sum(gradient(Swpos(3,:))>=0)),SW_DOWN*ones(1,sum(gradient(Swpos(3,:))<0)),ST*ones(1,length(Stpos(3,:)))];
+            case {2}, pos_state = [SW_UP*ones(1,sum(gradient(Swpos(3,:))>=0&gradient(Swpos(2,:))==0)),SW_SW*ones(1,sum(gradient(Swpos(2,:))~=0)),SW_DOWN*ones(1,sum(gradient(Swpos(3,:))<0&gradient(Swpos(2,:))==0)),ST*ones(1,length(Stpos(3,:)))];
+        end
+        
     else
         if(flag == 0)
             leg_z = [Stpos(3,:),Swpos(3,:)];
             leg_y = [Stpos(2,:)-stepAmplitude*sin(stepRotate),Swpos(2,:)-stepAmplitude*sin(stepRotate)];
-            leg_x = [Stpos(1,:)-stepAmplitude*cos(stepRotate),Swpos(1,:)-stepAmplitude*cos(stepRotate)];
-            pos_state = [ST*ones(1,length(Stpos(3,:))),SW_UP*ones(1,sum(gradient(Swpos(3,:))>=0)),SW_DOWN*ones(1,sum(gradient(Swpos(3,:))<0))];
+            leg_x = [Stpos(1,:)-stepAmplitude*cos(stepRotate),Swpos(1,:)-stepAmplitude*cos(stepRotate)];  
+            switch track_type
+                case {1}, pos_state = [ST*ones(1,length(Stpos(3,:))),SW_UP*ones(1,sum(gradient(Swpos(3,:))>=0)),SW_DOWN*ones(1,sum(gradient(Swpos(3,:))<0))];
+                case {2}, pos_state = [ST*ones(1,length(Stpos(3,:))),SW_UP*ones(1,sum(gradient(Swpos(3,:))>=0&gradient(Swpos(2,:))==0)),SW_SW*ones(1,sum(gradient(Swpos(2,:))~=0)),SW_DOWN*ones(1,sum(gradient(Swpos(3,:))<0&gradient(Swpos(2,:))==0))];
+            end
         else
             leg_z = [Stpos(3,end-floor(Gait_num*floorfactor*(flag-1)/(numGroup-1)):end),Swpos(3,:),Stpos(3,1:end-floor(Gait_num*floorfactor*(flag-1)/(numGroup-1))-1)];
             leg_y = [Stpos(2,end-floor(Gait_num*floorfactor*(flag-1)/(numGroup-1)):end)-stepAmplitude*sin(stepRotate)*(flag-1)/(numGroup-1),...
                      Swpos(2,:)-stepAmplitude*sin(stepRotate)*(flag-1)/(numGroup-1),...
                      Stpos(2,1:end-floor(Gait_num*floorfactor*(flag-1)/(numGroup-1))-1)-stepAmplitude*sin(stepRotate)*(flag-1)/(numGroup-1)];
-
             leg_x = [Stpos(1,end-floor(Gait_num*floorfactor*(flag-1)/(numGroup-1)):end)-stepAmplitude*cos(stepRotate)*(flag-1)/(numGroup-1),...
                      Swpos(1,:)-stepAmplitude*cos(stepRotate)*(flag-1)/(numGroup-1),...
                      Stpos(1,1:end-floor(Gait_num*floorfactor*(flag-1)/(numGroup-1))-1)-stepAmplitude*cos(stepRotate)*(flag-1)/(numGroup-1)];
-            pos_state = [ST*ones(1,length(Stpos(3,end-floor(Gait_num*floorfactor*(flag-1)/(numGroup-1)):end))),...
-                         SW_UP*ones(1,sum(gradient(Swpos(3,:))>=0)),SW_DOWN*ones(1,sum(gradient(Swpos(3,:))<0)),...
-                         ST*ones(1,length(Stpos(3,1:end-floor(Gait_num*floorfactor*(flag-1)/(numGroup-1))-1)))];
+            switch track_type
+                case {1}, pos_state = [ST*ones(1,length(Stpos(3,end-floor(Gait_num*floorfactor*(flag-1)/(numGroup-1)):end))),...
+                                     SW_UP*ones(1,sum(gradient(Swpos(3,:))>=0&gradient(Swpos(2,:))==0)),SW_SW*ones(1,sum(gradient(Swpos(2,:))~=0)),SW_DOWN*ones(1,sum(gradient(Swpos(3,:))<0&gradient(Swpos(2,:))==0)),...
+                                     ST*ones(1,length(Stpos(3,1:end-floor(Gait_num*floorfactor*(flag-1)/(numGroup-1))-1)))];
+                case {2}, pos_state = [ST*ones(1,length(Stpos(3,end-floor(Gait_num*floorfactor*(flag-1)/(numGroup-1)):end))),...
+                                     SW_UP*ones(1,sum(gradient(Swpos(3,:))>=0&gradient(Swpos(2,:))==0)),SW_SW*ones(1,sum(gradient(Swpos(2,:))~=0)),SW_DOWN*ones(1,sum(gradient(Swpos(3,:))<0&gradient(Swpos(2,:))==0)),...
+                                     ST*ones(1,length(Stpos(3,1:end-floor(Gait_num*floorfactor*(flag-1)/(numGroup-1))-1)))];
+            end
         end
     end
     % 一个步态周期的足端轨迹位置
@@ -226,8 +279,54 @@ function [Gait_num, Swpos, Stpos] = Generate_track(stepHeight,stepAmplitude,step
 
 
 end
-% 新的足端轨迹设计
+% 新的足端轨迹设计，分为上升段、滑动段、下落段，上升和下落只有z轴变换，下落段的轨迹点间隔比上升段密
 function [Gait_num, Swpos, Stpos] = Generate_track2(stepHeight,stepAmplitude,stepRotate,Gait_flag)
+    switch Gait_flag
+        case {3}%,   disp('三足步态');
+        case {4}%,   disp('四足步态');
+        case {5}%,   disp('五足步态');
+        otherwise,  error('！！！步态模式错误！！！');
+    end
+    stepRotate = deg2rad(stepRotate);
+    floorfactor = Gait_flag / 6;    % 占地系数
+    dutyfactor = 1 - floorfactor;   % 占空比
+    ksw = round(floorfactor/dutyfactor);    % 放作摆动相的时间系数
+
+    % 足端轨迹函数，离散化  4 6 10  //  4 2 2
+    swigNum_sw = 4;          % 单摆动周期插值点数
+    swigNum_up = 6;
+    swigNum_down = 10;
+    
+    swigNum = swigNum_sw+swigNum_up+swigNum_down;
+    stigNum = ksw*swigNum;  % 单支撑周期插值点数
+    % 单摆动周期的时间序列
+    SwigTimeSeq_sw = linspace(0,1, swigNum_sw); 
+    SwigTimeSeq_up = linspace(0,1, swigNum_up);
+    SwigTimeSeq_down = linspace(0,1, swigNum_down);
+    % 单支撑周期的时间序列
+%     StigTimeSeq = linspace(0,1, stigNum);
+    Gait_num = swigNum + stigNum;
+    % 【单摆动周期内的正弦函数】  
+    Swpos(1,:) = [0*ones(1,swigNum_up), stepAmplitude*cos(stepRotate)*0.5*(1-cos(SwigTimeSeq_sw.*pi)), stepAmplitude*cos(stepRotate)*ones(1,swigNum_down)];
+    Swpos(2,:) = [0*ones(1,swigNum_up), stepAmplitude*sin(stepRotate)*0.5*(1-cos(SwigTimeSeq_sw.*pi)), stepAmplitude*sin(stepRotate)*ones(1,swigNum_down)];
+    Swpos(3,:) = [2/3*stepHeight*SwigTimeSeq_up, 2/3*stepHeight + 1/3*stepHeight*(1-abs(cos(SwigTimeSeq_sw.*pi))), 2/3*stepHeight*fliplr(SwigTimeSeq_down)];
+    % 【单支撑周期内的正弦函数】
+    for i = 1:ksw
+        if i == 1
+            Stx = [stepAmplitude*cos(stepRotate)*(i-1)/ksw*ones(1,swigNum_down), stepAmplitude*cos(stepRotate)*i/ksw*0.5*(1-cos(SwigTimeSeq_sw.*pi)), stepAmplitude*cos(stepRotate)*i/ksw*ones(1,swigNum_up)];
+            Sty = [stepAmplitude*sin(stepRotate)*(i-1)/ksw*ones(1,swigNum_down), stepAmplitude*sin(stepRotate)*i/ksw*0.5*(1-cos(SwigTimeSeq_sw.*pi)), stepAmplitude*sin(stepRotate)*i/ksw*ones(1,swigNum_up)];
+        else
+            Stx = [Stx, [stepAmplitude*cos(stepRotate)*(i-1)/ksw*ones(1,swigNum_down), stepAmplitude*cos(stepRotate)*i/ksw*0.5*(1-cos(SwigTimeSeq_sw.*pi)), stepAmplitude*cos(stepRotate)*i/ksw*ones(1,swigNum_up)]];
+            Sty = [Sty, [stepAmplitude*sin(stepRotate)*(i-1)/ksw*ones(1,swigNum_down), stepAmplitude*sin(stepRotate)*i/ksw*0.5*(1-cos(SwigTimeSeq_sw.*pi)), stepAmplitude*sin(stepRotate)*i/ksw*ones(1,swigNum_up)]];
+        end
+    end
+    Stpos(1,:) = fliplr(Stx);
+    Stpos(2,:) = fliplr(Sty);
+    Stpos(3,:) = zeros(1, stigNum);
+end
+
+% 足端轨迹规划，上升段的起点由输入决定，终点固定
+function [Gait_num, Swpos, Stpos] = Generate_track3(stepHeight,stepAmplitude,stepRotate,Gait_flag)
     switch Gait_flag
         case {3}%,   disp('三足步态');
         case {4}%,   disp('四足步态');
