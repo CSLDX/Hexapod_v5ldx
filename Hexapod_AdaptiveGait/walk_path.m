@@ -1,7 +1,7 @@
 function [gait_num, leg_pos, flag] = walk_path(rX,rY,rBody_rotate,lastX,lastY,lastBody_rotate,flag)
     C = Control;
     MT = MakeTrack;
-    Amplitude_threshold = 0.05;
+    Amplitude_threshold = 0.04;
     stepheight = 0.035;
     switch flag
         case {1} 

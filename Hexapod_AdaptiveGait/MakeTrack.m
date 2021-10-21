@@ -9,6 +9,7 @@ MT.Four_leg_gait = @Four_leg_gait;
 MT.Five_leg_gait = @Five_leg_gait;
 MT.Adaptive_gait = @Adaptive_gait;
 MT.New_adaptive_gait = @New_adaptive_gait;
+MT.Trans_Matirx = @Trans_Matirx;
 MT.Body2Body_trans = @Trans_Matirx;
 MT.Leg2Body_trans = @Trans_Matirx;
 end
@@ -325,52 +326,7 @@ function [Gait_num, Swpos, Stpos] = Generate_track2(stepHeight,stepAmplitude,ste
     Stpos(3,:) = zeros(1, stigNum);
 end
 
-% 足端轨迹规划，上升段的起点由输入决定，终点固定
-function [Gait_num, Swpos, Stpos] = Generate_track3(stepHeight,stepAmplitude,stepRotate,Gait_flag)
-    switch Gait_flag
-        case {3}%,   disp('三足步态');
-        case {4}%,   disp('四足步态');
-        case {5}%,   disp('五足步态');
-        otherwise,  error('！！！步态模式错误！！！');
-    end
-    stepRotate = deg2rad(stepRotate);
-    floorfactor = Gait_flag / 6;    % 占地系数
-    dutyfactor = 1 - floorfactor;   % 占空比
-    ksw = round(floorfactor/dutyfactor);    % 放作摆动相的时间系数
-
-    % 足端轨迹函数，离散化  4 6 10  //  4 2 2
-    swigNum_sw = 4;          % 单摆动周期插值点数
-    swigNum_up = 6;
-    swigNum_down = 10;
-    
-    swigNum = swigNum_sw+swigNum_up+swigNum_down;
-    stigNum = ksw*swigNum;  % 单支撑周期插值点数
-    % 单摆动周期的时间序列
-    SwigTimeSeq_sw = linspace(0,1, swigNum_sw); 
-    SwigTimeSeq_up = linspace(0,1, swigNum_up);
-    SwigTimeSeq_down = linspace(0,1, swigNum_down);
-    % 单支撑周期的时间序列
-%     StigTimeSeq = linspace(0,1, stigNum);
-    Gait_num = swigNum + stigNum;
-    % 【单摆动周期内的正弦函数】  
-    Swpos(1,:) = [0*ones(1,swigNum_up), stepAmplitude*cos(stepRotate)*0.5*(1-cos(SwigTimeSeq_sw.*pi)), stepAmplitude*cos(stepRotate)*ones(1,swigNum_down)];
-    Swpos(2,:) = [0*ones(1,swigNum_up), stepAmplitude*sin(stepRotate)*0.5*(1-cos(SwigTimeSeq_sw.*pi)), stepAmplitude*sin(stepRotate)*ones(1,swigNum_down)];
-    Swpos(3,:) = [2/3*stepHeight*SwigTimeSeq_up, 2/3*stepHeight + 1/3*stepHeight*(1-abs(cos(SwigTimeSeq_sw.*pi))), 2/3*stepHeight*fliplr(SwigTimeSeq_down)];
-    % 【单支撑周期内的正弦函数】
-    for i = 1:ksw
-        if i == 1
-            Stx = [stepAmplitude*cos(stepRotate)*(i-1)/ksw*ones(1,swigNum_down), stepAmplitude*cos(stepRotate)*i/ksw*0.5*(1-cos(SwigTimeSeq_sw.*pi)), stepAmplitude*cos(stepRotate)*i/ksw*ones(1,swigNum_up)];
-            Sty = [stepAmplitude*sin(stepRotate)*(i-1)/ksw*ones(1,swigNum_down), stepAmplitude*sin(stepRotate)*i/ksw*0.5*(1-cos(SwigTimeSeq_sw.*pi)), stepAmplitude*sin(stepRotate)*i/ksw*ones(1,swigNum_up)];
-        else
-            Stx = [Stx, [stepAmplitude*cos(stepRotate)*(i-1)/ksw*ones(1,swigNum_down), stepAmplitude*cos(stepRotate)*i/ksw*0.5*(1-cos(SwigTimeSeq_sw.*pi)), stepAmplitude*cos(stepRotate)*i/ksw*ones(1,swigNum_up)]];
-            Sty = [Sty, [stepAmplitude*sin(stepRotate)*(i-1)/ksw*ones(1,swigNum_down), stepAmplitude*sin(stepRotate)*i/ksw*0.5*(1-cos(SwigTimeSeq_sw.*pi)), stepAmplitude*sin(stepRotate)*i/ksw*ones(1,swigNum_up)]];
-        end
-    end
-    Stpos(1,:) = fliplr(Stx);
-    Stpos(2,:) = fliplr(Sty);
-    Stpos(3,:) = zeros(1, stigNum);
-end
-
+% 相对的
 % 输入的是期望机身坐标系相对当前机身坐标系的偏移和旋转
 % （当前机身坐标系下坐标）= T*（期望机身坐标系下坐标）
 % 输入的是腿相对与机身的位置偏移和旋转，
