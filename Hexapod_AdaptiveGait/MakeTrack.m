@@ -96,13 +96,16 @@ function [Gait_num, Leg_pos] = Five_leg_gait(stepHeight,stepAmplitude,stepRotate
     end
 end
 %% 自适应步态，修改足端轨迹
-function [Gait_num, Leg_pos, pos_offset] = Adaptive_gait(Gait_num, Leg_pos, Is_collision, gait_num, last_pos_offset)
+function [Gait_num, Leg_pos, pos_offset, ready2next, next_gait_num, Is_torch] = Adaptive_gait(Gait_num, Leg_pos, Is_collision, gait_num, last_pos_offset)
     % 标志量常量
     ST = 0;
     SW_UP = 1;
     SW_DOWN = 2;
     pos_offset = zeros(3,6);
     threshold = 0.001; % 1mm的阈值
+    ready2next = 1; % 如果为1表示下落阶段的足端都已经触地，如果为0表示还有足端未落地
+    Is_torch = ones(1,6);
+    next_gait_num = 0;
     for i = 1:6
         % 足端提前遇到地面的情况
         % 修改当前步态周期的轨迹点
@@ -112,68 +115,40 @@ function [Gait_num, Leg_pos, pos_offset] = Adaptive_gait(Gait_num, Leg_pos, Is_c
             pos_offset(1,i) = Leg_pos{i,1}(1,gait_num);
             % 修改当前步态周期，当前腿的轨迹点z坐标
             Leg_pos{i,1}(3,gait_num:end) = pos_offset(3,i);            
-            Leg_pos{i,1}(4,:) = Leg_pos{i,1}(4,:) + 10; % 表示该条轨迹已经改动过了
+            % 执行下一步的条件
+            ready2next = ready2next & 1;
+        else
+            ready2next = ready2next & 0;
         end
-        
-        % 当前周期的轨迹调整与上一周期的状态相关
-        % 摆动相调整
-        if last_pos_offset(3,i) ~= 0 && (Leg_pos{i,1}(4,gait_num) == SW_UP || Leg_pos{i,1}(4,gait_num) == ST)
-            % z坐标变化，xy坐标不动（简单处理方式）
-            for j = gait_num:Gait_num
-                if Leg_pos{i,1}(3,j) < last_pos_offset(3,i) && (Leg_pos{i,1}(4,j) == SW_UP || Leg_pos{i,1}(4,j) == ST)
-                    Leg_pos{i,1}(3,j) = last_pos_offset(3,i);
-                    Leg_pos{i,1}(4,j) = Leg_pos{i,1}(4,j) + 10;
-                else
-                     break;
-                end
-            end
-            for jj = j:Gait_num
-                if Leg_pos{i,1}(4,jj) == ST
-                    Leg_pos{i,1}(4,jj) = Leg_pos{i,1}(4,jj) + 10;
+    end
+    
+    if ready2next == 1
+        % 找到下一个要抬起的脚
+        for t = gait_num:Gait_num
+            for i = 1:6
+                if Leg_pos{i,1}(4,t) == SW_UP
+                    if t ~= Gait_num
+                        next_gait_num = t;
+                    end
+                    break;
                 end
             end
         end
-        % 足端延后遇到地面的情况(假设完整轨迹起点平面为负，正常的平面行走变成提前遇到地面的特殊情况，延后遇到地面的情况即正常完成轨迹)
-        % 如果再不触地，则进入特殊的模式
-
+    else
+        % 判断落地的足端如果没有触地，执行新的下落周期
+        for i = 1:6
+            if Is_collision(i) == 0  && Leg_pos{i,1}(4,gait_num) == ST && gait_num > 1 
+                if Leg_pos{i,1}(4,gait_num-1) == SW_DOWN
+                    Is_torch(i) = 0;
+                end
+            elseif Is_collision(i) == 0  && Leg_pos{i,1}(4,gait_num) == SW_DOWN && gait_num == Gait_num % 步态周期最后一个落点
+                Is_torch(i) = 0;
+            end
+        end
     end
     
 end
 
-% function [Gait_num, Leg_pos, pos_offset] = New_adaptive_gait(Gait_num, Leg_pos, Is_collision, gait_num, last_pos_offset)
-%     % 标志量常量
-%     ST = 0;
-%     SW_UP = 1;
-%     SW_DOWN = 2;
-%     pos_offset = zeros(3,6);
-%     threshold = 0.001; % 1mm的阈值
-%     for i = 1:6
-%         % 足端提前遇到地面的情况
-%         % 修改当前步态周期的轨迹点
-%         if Is_collision(i) == 1  && Leg_pos{i,1}(4,gait_num) == SW_DOWN && Leg_pos{i,1}(3,gait_num) > threshold 
-%             pos_offset(3,i) = Leg_pos{i,1}(3,gait_num);
-%             pos_offset(2,i) = Leg_pos{i,1}(2,gait_num);
-%             pos_offset(1,i) = Leg_pos{i,1}(1,gait_num);
-%             % 找到第i腿SW_DOWN段最后的一个轨迹点
-%             down_index = find(Leg_pos{i,1}(4,gait_num:end) == SW_DOWN);
-%             end_down_x = Leg_pos{i,1}(1,down_index(end));
-%             end_down_y = Leg_pos{i,1}(2,down_index(end));
-%             % 修改当前步态周期
-%             % 下落段xyz不再改变
-%             Leg_pos{i,1}(1,gait_num:down_index(end)) = pos_offset(1,i);
-%             Leg_pos{i,1}(2,gait_num:down_index(end)) = pos_offset(2,i);
-%             % 后续的支撑段对应平移，z轴始终维持
-%             Leg_pos{i,1}(1,down_index(end):end) = Leg_pos{i,1}(1,down_index(end):end) - (end_down_x - pos_offset(1,i));
-%             Leg_pos{i,1}(2,down_index(end):end) = Leg_pos{i,1}(2,down_index(end):end) - (end_down_y - pos_offset(2,i));
-%             Leg_pos{i,1}(3,gait_num:end) = pos_offset(3,i);            
-%             Leg_pos{i,1}(4,:) = Leg_pos{i,1}(4,:) + 10; % 表示该条轨迹已经改动过了
-%         end
-%         
-%         
-% 
-%     end
-%     
-% end
 
 %% *********************************************************************************************************
 % 内部的功能函数，外部不调用

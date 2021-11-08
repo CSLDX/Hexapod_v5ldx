@@ -79,6 +79,7 @@ if (clientID>-1)
     % 相关参数变量初始化      
     N0 = 10; % 调整机身位姿步数   
     N = 100; % 步数
+    N1 = 15; % 行走时调整机身平衡步数
     stepRotate = [0 0 0 0 0 0];   % 迈步方向 
     stepHeight = 0.03*ones(1,6);  % 抬腿高度
     stepAmplitude = [0 0 0 0 0 0];% 迈步步幅
@@ -96,6 +97,7 @@ if (clientID>-1)
     body_height = 0;
     body_rotatex = 0; % 期望的机身翻滚
     body_rotatey = 0; % 期望的机身俯仰
+    body_heightz = 0; % 期望的机身升降
     footTip_pos = zeros(6,4);
     Is_adaptive = 1; % 开启和关闭自适应功能
     %**********************************************************************
@@ -163,7 +165,7 @@ if (clientID>-1)
 %             [gait_num, leg_pos] = MT.Three_leg_gait(stepHeight,stepAmplitude,stepRotate);
 %             [gait_num, leg_pos] = MT.Output_track(0.03,0.03,60,3);
 %             [stepHeight,stepAmplitude,stepRotate,error_dis,error_rot] = Body_walk_control(dX,dY,dBody_rotate,rX,rY,rBody_rotate,lastX,lastY,lastBody_rotate);
-%             [gait_num, leg_pos] = walk_path(stepHeight,stepAmplitude,stepRotate,j);
+
             [~,body_angles] = vrep.simxGetObjectOrientation(clientID, handle_bodyBase, -1, vrep.simx_opmode_buffer);
             [~,body_position] = vrep.simxGetObjectPosition(clientID, handle_bodyBase, -1, vrep.simx_opmode_buffer);
             % 同步
@@ -173,7 +175,7 @@ if (clientID>-1)
 %                                                                         body_position(1),body_position(2),body_angles(3),...
 %                                                                         lastX,lastY,lastBody_rotate,0.04,0.03);
 %             [gait_num, leg_pos] = MT.Three_leg_gait(stepHeight,stepAmplitude,stepRotate);
-            [gait_num, leg_pos, flag] = walk_path(body_position(1),body_position(2),body_angles(3),lastX,lastY,lastBody_rotate,flag);       
+            [gait_num, leg_pos, flag, stepHeight] = walk_path(body_position(1),body_position(2),body_angles(3),lastX,lastY,lastBody_rotate,flag);       
             % 遍历设计的的足端轨迹并发送给机器人           
             for tt = 1:gait_num
                 for i = 1 : 6
@@ -189,23 +191,21 @@ if (clientID>-1)
                 % 自适应足端轨迹
                 if Is_adaptive
                     [~, leg_pos, legpos_offset] = MT.Adaptive_gait(gait_num, leg_pos, Is_collision, tt, last_LegPos_offset);
-                    % 身体姿态的转换矩阵
-                    % 期望机身坐标系相对当前机身坐标系的偏移和旋转
-                    % vrep读取姿态角度中，如果是相对于绝对坐标，就以绝对坐标系来判定翻滚、俯仰和偏航
-                    % 如果要完成类似于陀螺仪的姿态读取，在读取绝对坐标后要进行转换，相当于把绝对坐标转换成要读取的坐标系同相
+                    
                     Turn_z = [0,0,-body_angles(3)];
                     Turn_AbsoluteOrientation = MT.Trans_Matirx([0 0 0],Turn_z);
                     body_angles_impro = Turn_AbsoluteOrientation*[body_angles';1];
                     body_rotate_impro = Turn_AbsoluteOrientation*[body_rotatex;body_rotatey;0;1];
+                    body_height_impro = body_height + body_heightz;
                     
-                    Body2Body_offset = [0,0,body_position(3)-body_height];  % 期望的机身高度body_height
+                    Body2Body_offset = [0,0,body_position(3)-body_height_impro];  % 期望的机身高度body_height
                     Body2Body_rot = [body_angles_impro(1)-body_rotate_impro(1),body_angles_impro(2)-body_rotate_impro(2),0];  % 期望的机身翻滚角度Alpha、俯仰角度Beta 
                     Body2Body_T = MT.Body2Body_trans(Body2Body_offset,Body2Body_rot);  
                 end
 
                 % 输出足端轨迹
                 for i = 1 : 6
-                    footTip_pos(i,:) = (Body2Body_T*Leg2Body_T{i}*[leg_pos{i,1}(1,tt);leg_pos{i,1}(2,tt);leg_pos{i,1}(3,tt);1])';
+                    footTip_pos(i,:) = (Body2Body_T*Leg2Body_T{i}*[leg_pos{i,1}(1,tt);leg_pos{i,1}(2,tt);leg_pos{i,1}(3,tt);1])'; % 足端相对于机身坐标系的位置
                     vrep.simxSetObjectPosition(clientID, eval(['handle_footTarget',num2str(i)]),handle_bodyBase,Body2Body_T*Leg2Body_T{i}*[leg_pos{i,1}(1,tt);leg_pos{i,1}(2,tt);leg_pos{i,1}(3,tt);1],vrep.simx_opmode_oneshot);              
                     % 如开启自适应，更新补偿值                 
                     if Is_adaptive
@@ -246,16 +246,29 @@ if (clientID>-1)
 %             end
 
             % 改变机身期望方向,以各足端相对于机身的位置作为计算值,进行平面计算姿态
-            k_xz1 = (footTip_pos(1,3) - footTip_pos(3,3))/(footTip_pos(1,1) - footTip_pos(3,1));
-            k_xz2 = (footTip_pos(6,3) - footTip_pos(4,3))/(footTip_pos(6,1) - footTip_pos(4,1));
-            Beta = atan(mean([k_xz1 k_xz2])); % yz平面
-            k_yz1 = (footTip_pos(1,3) - footTip_pos(6,3))/(footTip_pos(1,2) - footTip_pos(6,2));
-            k_yz2 = (footTip_pos(2,3) - footTip_pos(5,3))/(footTip_pos(2,2) - footTip_pos(5,2));
-            k_yz3 = (footTip_pos(3,3) - footTip_pos(4,3))/(footTip_pos(3,2) - footTip_pos(4,2));
-            Alpha = atan(mean([k_yz1 k_yz2 k_yz3])); % xz平面
-            
-            body_rotatex = -Alpha;
-            body_rotatey = -Beta;
+            [body_rotatex,body_rotatey,body_heightz] = C.Body_balance_control(footTip_pos, stepHeight);
+            if Is_adaptive
+                for k = 1:N1
+                    % 身体姿态的转换矩阵
+                    % 期望机身坐标系相对当前机身坐标系的偏移和旋转
+                    % vrep读取姿态角度中，如果是相对于绝对坐标，就以绝对坐标系来判定翻滚、俯仰和偏航
+                    % 如果要完成类似于陀螺仪的姿态读取，在读取绝对坐标后要进行转换，相当于把绝对坐标转换成要读取的坐标系同相
+                    Turn_z = [0,0,-body_angles(3)];
+                    Turn_AbsoluteOrientation = MT.Trans_Matirx([0 0 0],Turn_z);
+                    body_angles_impro = Turn_AbsoluteOrientation*[body_angles';1];
+                    body_rotate_impro = Turn_AbsoluteOrientation*[body_rotatex;body_rotatey;0;1];
+                    body_height_impro = body_height + body_heightz;
+
+                    Body2Body_offset = [0,0,(body_position(3)-body_height_impro)/N1*k];  % 期望的机身高度body_height
+                    Body2Body_rot = [(body_angles_impro(1)-body_rotate_impro(1))/N1*k,(body_angles_impro(2)-body_rotate_impro(2))/N1*k,0];  % 期望的机身翻滚角度Alpha、俯仰角度Beta 
+                    Body2Body_T = MT.Body2Body_trans(Body2Body_offset,Body2Body_rot); 
+
+                    % 输出足端轨迹
+                    for i = 1 : 6
+                        vrep.simxSetObjectPosition(clientID, eval(['handle_footTarget',num2str(i)]),handle_bodyBase,Body2Body_T*Leg2Body_T{i}*[leg_pos{i,1}(1,tt);leg_pos{i,1}(2,tt);leg_pos{i,1}(3,tt);1],vrep.simx_opmode_oneshot);              
+                    end
+                end  
+            end
 
             Body2Body_T = eye(4); % 重置矩阵   
             last_LegPos_offset = LegPos_offset; % 记录上一次足端轨迹的补偿值
