@@ -137,11 +137,11 @@ function [Gait_num, Leg_pos, pos_offset, ready2next, next_gait_num, Is_torch] = 
     else
         % 判断落地的足端如果没有触地，执行新的下落周期
         for i = 1:6
-            if Is_collision(i) == 0  && Leg_pos{i,1}(4,gait_num) == ST && gait_num > 1 
-                if Leg_pos{i,1}(4,gait_num-1) == SW_DOWN
-                    Is_torch(i) = 0;
-                end
-            elseif Is_collision(i) == 0  && Leg_pos{i,1}(4,gait_num) == SW_DOWN && gait_num == Gait_num % 步态周期最后一个落点
+            if Is_collision(i) == 0  && Leg_pos{i,1}(4,gait_num) == ST && gait_num > 1 && Leg_pos{i,1}(4,gait_num-1) == SW_DOWN 
+                Is_torch(i) = 0;
+            elseif Is_collision(i) == 0  && Leg_pos{i,1}(4,gait_num) == ST && gait_num == 1  
+                Is_torch(i) = 0;
+            elseif Is_collision(i) == 0  && Leg_pos{i,1}(4,gait_num) == SW_DOWN && gait_num == Gait_num  
                 Is_torch(i) = 0;
             end
         end

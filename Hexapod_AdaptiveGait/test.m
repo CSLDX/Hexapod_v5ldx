@@ -58,7 +58,7 @@ if (clientID>-1)
     % 足端相对位置读取,碰撞检测
     Leg2Body_offset = zeros(6,3);
     Leg2Body_rot = zeros(6,3);
-    Is_collision = zeros(6);
+    Is_collision = zeros(1,6);
     Leg2Body_T = cell(6,1);
     Original_Leg2Body_T = cell(6,1);
     AdjustBody_T = cell(6,1);
@@ -88,7 +88,7 @@ if (clientID>-1)
     stepRotate = [0 0 0 0 0 0];   % 迈步方向 
     stepHeight = 0.03*ones(1,6);  % 抬腿高度
     stepAmplitude = [0 0 0 0 0 0];% 迈步步幅
-    num = 0;  % 保存数据的计数值
+    num = 1;  % 保存数据的计数值
     flag = 1; % 行走路径点的标志位
     imageAcquisitionTime = 0;       % vrep图像获取的时间戳
     last_imageAcquisitionTime = 0;  % 上个vrep图像获取的时间戳，用于计算帧率
@@ -218,7 +218,7 @@ if (clientID>-1)
                     end 
                 end
                 
-                leg_is_torch(num,:) = Is_torch;
+%                 leg_is_torch(num,:) = Is_collision;
 
                 
                 % 判断为未触地时，额外继续向下探索，步数为N2，探索高度为抬腿高度stepHeight
@@ -233,6 +233,7 @@ if (clientID>-1)
                                 vrep.simxSynchronousTrigger(clientID);
                                 vrep.simxGetPingTime(clientID);
                             end
+%                             leg_is_torch(num,:) = Is_collision;
                             Is_torch(i) = Is_collision(i);
                             if sum(Is_torch) == 6
                                 break;
@@ -276,7 +277,7 @@ if (clientID>-1)
 %                 body_Angles_impro(num+1,:) = rad2deg(body_angles_impro);
 %                 body_Position(num+1,:) = body_position;
 %                 body2body_M{num+1} = Body2Body_T;
-                num = num + 1;
+%                 num = num + 1;
 
                 % 同步
                 vrep.simxSynchronousTrigger(clientID);
