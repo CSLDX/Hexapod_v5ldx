@@ -105,6 +105,7 @@ if (clientID>-1)
     footTip_pos = zeros(6,4);
     Last_footTip_pos = zeros(6,4);
     ready2next = 0;
+    Is_torch = ones(1,6);
     Is_adaptive = 1; % 开启和关闭自适应功能
     %**********************************************************************
     while(vrep.simxGetConnectionId(clientID) ~= -1)  % while v-rep connection is still active       
@@ -183,13 +184,14 @@ if (clientID>-1)
             % 同步
             vrep.simxSynchronousTrigger(clientID);
             vrep.simxGetPingTime(clientID);      
-            [stepHeight,stepAmplitude,stepRotate,error_dis,eror_rot] = C.Body_walk_control(body_position(1)+0.1, body_position(2), 0,...
-                                                                        body_position(1),body_position(2),body_angles(3),...
-                                                                        lastX,lastY,lastBody_rotate,0.02,0.03);
-            [gait_num, leg_pos] = MT.Three_leg_gait(stepHeight,stepAmplitude,stepRotate);
-%             [gait_num, leg_pos, flag, stepHeight] = walk_path(body_position(1),body_position(2),body_angles(3),lastX,lastY,lastBody_rotate,flag);   
+%             [stepHeight,stepAmplitude,stepRotate,error_dis,eror_rot] = C.Body_walk_control(body_position(1)+0.1, body_position(2), 0,...
+%                                                                         body_position(1),body_position(2),body_angles(3),...
+%                                                                         lastX,lastY,lastBody_rotate,0.02,0.03);
+%             [gait_num, leg_pos] = MT.Three_leg_gait(stepHeight,stepAmplitude,stepRotate);
+            [gait_num, leg_pos, flag, stepHeight,Is_adaptive] = walk_path(body_position(1),body_position(2),body_angles(3),lastX,lastY,lastBody_rotate,flag);   
             
             downFoot = zeros(1,6);
+            Is_torch = ones(1,6);
             % 遍历设计的的足端轨迹并发送给机器人           
             for tt = 1:gait_num
                 for i = 1 : 6

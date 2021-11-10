@@ -72,26 +72,26 @@ end
 
 %% 三足步态
 % stepHeight,stepAmplitude,stepRotate为1*6的向量，代表每个腿
-function [Gait_num, Leg_pos] = Three_leg_gait(stepHeight,stepAmplitude,stepRotate)
+function [Gait_num, Leg_pos] = Three_leg_gait(stepHeight,stepAmplitude,stepRotate,track_type)
     Leg_pos = cell(6,1);
     for i = 1:6
-        [Gait_num, leg_pos] = Output_leg_track(stepHeight(i),stepAmplitude(i),stepRotate(i),3,i);
+        [Gait_num, leg_pos] = Output_leg_track(stepHeight(i),stepAmplitude(i),stepRotate(i),3,i,track_type);
         Leg_pos{i} = leg_pos;
     end
 end
 %% 四足步态
-function [Gait_num, Leg_pos] = Four_leg_gait(stepHeight,stepAmplitude,stepRotate)
+function [Gait_num, Leg_pos] = Four_leg_gait(stepHeight,stepAmplitude,stepRotate,track_type)
     Leg_pos = cell(6,1);
     for i = 1:6
-        [Gait_num, leg_pos] = Output_leg_track(stepHeight(i),stepAmplitude(i),stepRotate(i),4,i);
+        [Gait_num, leg_pos] = Output_leg_track(stepHeight(i),stepAmplitude(i),stepRotate(i),4,i,track_type);
         Leg_pos{i} = leg_pos;
     end
 end
 %% 五足步态
-function [Gait_num, Leg_pos] = Five_leg_gait(stepHeight,stepAmplitude,stepRotate)
+function [Gait_num, Leg_pos] = Five_leg_gait(stepHeight,stepAmplitude,stepRotate,track_type)
     Leg_pos = cell(6,1);
     for i = 1:6
-        [Gait_num, leg_pos] = Output_leg_track(stepHeight(i),stepAmplitude(i),stepRotate(i),5,i);
+        [Gait_num, leg_pos] = Output_leg_track(stepHeight(i),stepAmplitude(i),stepRotate(i),5,i,track_type);
         Leg_pos{i} = leg_pos;
     end
 end
@@ -154,7 +154,7 @@ end
 % 内部的功能函数，外部不调用
 %*********************************************************************************************************
 %% 生成具体足端节律轨迹
-function [Gait_num, Leg_pos] = Output_leg_track(stepHeight,stepAmplitude,stepRotate,Gait_flag,Leg)
+function [Gait_num, Leg_pos] = Output_leg_track(stepHeight,stepAmplitude,stepRotate,Gait_flag,Leg,track_type)
     % 标志量常量  注意：不同设计的足端轨迹标注的上升段和下降段不一样！！
     % Generate_track函数生成的轨迹分为支撑相{ST}和摆动相，摆动相中z轴上升的标注为上升段{SW_UP}，z轴下降的标注为下降段{SW_DOWN}
     % Generate_track2函数生成的轨迹分为支撑相{ST}和摆动相，摆动相中z轴上升，xy轴不动（即垂直上升）的标注为上升段{SW_UP}，同理垂直下降的才标注为下降段{SW_DOWN},其余为摆动段{SW_SW}
@@ -163,7 +163,7 @@ function [Gait_num, Leg_pos] = Output_leg_track(stepHeight,stepAmplitude,stepRot
     SW_DOWN = 2;
     SW_SW = 3;
     % 轨迹生成
-    track_type = 2;
+%     track_type = 2;
     switch track_type
         case {1}, [Gait_num, Swpos, Stpos] = Generate_track(stepHeight,stepAmplitude,stepRotate,Gait_flag);
         case {2}, [Gait_num, Swpos, Stpos] = Generate_track2(stepHeight,stepAmplitude,stepRotate,Gait_flag);

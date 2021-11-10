@@ -142,10 +142,9 @@ function [body_rotatex_exp,body_rotatey_exp,body_height_exp,body_pos_exp,f] = Bo
     body_rotatey = Beta;
     
     body_angles_impro = Turn_AbsoluteOrientation*[body_angles';1];
-    body_rotate_impro = Turn_AbsoluteOrientation*[body_rotatex;body_rotatey;0;1];
     % 地形自适应规则
-    if abs(rad2deg(body_rotate_impro(2)-body_angles_impro(2)))>3 % 俯仰角姿态调整
-        body_rotatey_exp = (body_rotate_impro(2) + body_angles_impro(2));
+    if abs(rad2deg(body_rotatey-body_angles_impro(2)))>3 % 俯仰角姿态调整
+        body_rotatey_exp = (body_rotatey + body_angles_impro(2));
         body_pos_exp(1) = 0;
         f1 = 1;
     else 
@@ -153,8 +152,8 @@ function [body_rotatex_exp,body_rotatey_exp,body_height_exp,body_pos_exp,f] = Bo
         body_pos_exp(1) = -(0+Legpos_x);
         f1 = 2;
     end
-    if abs(rad2deg(body_rotate_impro(1)+body_angles_impro(1)))>3 % 翻滚角姿态调整
-        body_rotatex_exp = -(body_rotate_impro(1) - body_angles_impro(1));
+    if abs(rad2deg(body_rotatex+body_angles_impro(1)))>3 % 翻滚角姿态调整
+        body_rotatex_exp = -(body_rotatex - body_angles_impro(1));
         body_pos_exp(2) = 0;
         f2 = 3;
     else 
@@ -177,7 +176,7 @@ function [body_rotatex_exp,body_rotatey_exp,body_height_exp,body_pos_exp,f] = Bo
     
     body_height_exp = (body_height - body_heightz);
     
-    f = [rad2deg(body_rotate_impro(1)+body_angles_impro(1)) rad2deg(body_rotate_impro(2)-body_angles_impro(2)) Legpos_x Legpos_y height_std f1 f2];
+    f = [rad2deg(body_rotatex+body_angles_impro(1)) rad2deg(body_rotatey-body_angles_impro(2)) Legpos_x Legpos_y height_std f1 f2];
     
     
     
