@@ -104,7 +104,7 @@ function [stepHeight,stepAmplitude,stepRotate,error_dis,error_rot] = Body_walk_c
     end
 end
 
-function [body_rotatex_exp,body_rotatey_exp,body_height_exp,body_pos_exp,f] = Body_balance_control(footTip_pos,stepHeight, body_height, body_angles) 
+function [body_rotatex_exp,body_rotatey_exp,body_height_exp,body_pos_exp,f] = Body_balance_control(footTip_pos, body_height, body_angles) 
     MT = MakeTrack;
     Turn_z = [0,0,-body_angles(3)];
     Turn_AbsoluteOrientation = MT.Trans_Matirx([0 0 0],Turn_z);

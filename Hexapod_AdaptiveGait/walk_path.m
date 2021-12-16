@@ -4,14 +4,14 @@ function [gait_num, leg_pos, flag, stepHeight, Is_adaptive] = walk_path(rX,rY,rB
     Amplitude_threshold = 0.04;
     stepheight = 0.035;
     track_type = 1;
-    Is_adaptive = 1; 
+    Is_adaptive = 0; 
     switch flag
         case {1} 
             tar_x = 0.57139;
             tar_y = -0.94721;
             tar_rot = -180;
-            track_type = 2;
-            Is_adaptive = 1;
+            track_type = 1;
+            Is_adaptive = 0;
         case {2}
             tar_x = 0.076;
             tar_y = -0.87721;
@@ -37,7 +37,7 @@ function [gait_num, leg_pos, flag, stepHeight, Is_adaptive] = walk_path(rX,rY,rB
             track_type = 1;
             Is_adaptive = 0;
         case {6}
-            tar_x = -1.0956;
+            tar_x = -1;
             tar_y = -2.1982;
             stepheight = 0.03;
             Amplitude_threshold = 0.02;
@@ -45,19 +45,19 @@ function [gait_num, leg_pos, flag, stepHeight, Is_adaptive] = walk_path(rX,rY,rB
             track_type = 2;
             Is_adaptive = 1;
         case {7}
-            tar_x = -1.0956;
+            tar_x = -0.9;
             tar_y = -2.1982;
             stepheight = 0.02;
             Amplitude_threshold = 0.04;
-            tar_rot = -170;
+            tar_rot = 90;
             track_type = 1;
             Is_adaptive = 0;
         otherwise
-            tar_x = -1;
-            tar_y = -2.0412;
+            tar_x = -0.9;
+            tar_y = -2.1982;
             stepheight = 0.03;
             Amplitude_threshold = 0.04;
-            tar_rot = 0;
+            tar_rot = 90;
             flag = 0;
 %             disp('done')
     end
