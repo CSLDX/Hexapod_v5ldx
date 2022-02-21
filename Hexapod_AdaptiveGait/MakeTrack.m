@@ -322,7 +322,9 @@ function [T] = Trans_Matirx(offset,rot)
                0           0            1 offset(3);
                0           0            0 1
               ];
-    T = trans_x*trans_y*trans_z;
+    % 得到的是机身坐标系下腿部构成的平面在y-z和x-z平面上的倾角，按照姿态角旋转的先后顺序不同，在俯仰和翻滚上回有不同的误差
+    T = (trans_x*trans_y*trans_z+trans_y*trans_x*trans_z)/2;
+    
 end
 
 

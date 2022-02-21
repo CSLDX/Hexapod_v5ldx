@@ -143,18 +143,18 @@ function [body_rotatex_exp,body_rotatey_exp,body_height_exp,body_pos_exp,f] = Bo
     
     body_angles_impro = Turn_AbsoluteOrientation*[body_angles';1];
     % 地形自适应规则
-    if abs(rad2deg(body_rotatey-body_angles_impro(2)))>3 % 俯仰角姿态调整
-        body_rotatey_exp = (body_rotatey + body_angles_impro(2));
-        body_pos_exp(1) = 0;
+    if abs(rad2deg(body_angles_impro(2)))>3 || abs(rad2deg(body_rotatey))>4 % 俯仰角姿态调整
+        body_rotatey_exp = body_rotatey;
+        body_pos_exp(1) = -(0+Legpos_x);
         f1 = 1;
     else 
         body_rotatey_exp = (0 + body_angles_impro(2));
         body_pos_exp(1) = -(0+Legpos_x);
         f1 = 2;
     end
-    if abs(rad2deg(body_rotatex+body_angles_impro(1)))>3 % 翻滚角姿态调整
-        body_rotatex_exp = -(body_rotatex - body_angles_impro(1));
-        body_pos_exp(2) = 0;
+    if abs(rad2deg(body_angles_impro(1)))>3 || abs(rad2deg(body_rotatex))>4 % 翻滚角姿态调整
+        body_rotatex_exp = -body_rotatex;
+        body_pos_exp(2) = -(0+Legpos_y);
         f2 = 3;
     else 
         body_rotatex_exp = -(0 - body_angles_impro(1));
