@@ -247,7 +247,7 @@ function [Gait_num, Swpos, Stpos] = Generate_track(stepHeight,stepAmplitude,step
     % 【单摆动周期内的正弦函数】  
     Swpos(1,:) = stepAmplitude*cos(stepRotate)*0.5*(1-cos(SwigTimeSeq.*pi));
     Swpos(2,:) = stepAmplitude*sin(stepRotate)*0.5*(1-cos(SwigTimeSeq.*pi));
-    Swpos(3,:) = stepHeight*(1-abs(cos(SwigTimeSeq.*pi)));
+    Swpos(3,:) = stepHeight*sin(SwigTimeSeq.*pi);
     % 【单支撑周期内的正弦函数】
     Stpos(1,:) = stepAmplitude*cos(stepRotate)*0.5*(1-cos(fliplr(StigTimeSeq).*pi));
     Stpos(2,:) = stepAmplitude*sin(stepRotate)*0.5*(1-cos(fliplr(StigTimeSeq).*pi));
@@ -285,7 +285,7 @@ function [Gait_num, Swpos, Stpos] = Generate_track2(stepHeight,stepAmplitude,ste
     % 【单摆动周期内的正弦函数】  
     Swpos(1,:) = [0*ones(1,swigNum_up), stepAmplitude*cos(stepRotate)*0.5*(1-cos(SwigTimeSeq_sw.*pi)), stepAmplitude*cos(stepRotate)*ones(1,swigNum_down)];
     Swpos(2,:) = [0*ones(1,swigNum_up), stepAmplitude*sin(stepRotate)*0.5*(1-cos(SwigTimeSeq_sw.*pi)), stepAmplitude*sin(stepRotate)*ones(1,swigNum_down)];
-    Swpos(3,:) = [2/3*stepHeight*SwigTimeSeq_up, 2/3*stepHeight + 1/3*stepHeight*(1-abs(cos(SwigTimeSeq_sw.*pi))), 2/3*stepHeight*fliplr(SwigTimeSeq_down)];
+    Swpos(3,:) = [2/3*stepHeight*SwigTimeSeq_up, 2/3*stepHeight + 1/3*stepHeight*sin(SwigTimeSeq_sw.*pi), 2/3*stepHeight*fliplr(SwigTimeSeq_down)];
     % 【单支撑周期内的正弦函数】
     for i = 1:ksw
         if i == 1

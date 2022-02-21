@@ -48,21 +48,54 @@ dutyfactor = 1 - floorfactor;   % 占空比
 ksw = round(floorfactor/dutyfactor);    % 放作摆动相的时间系数
 
 %% 足端轨迹函数，离散化
-igTend = 1;           % 单摆动周期时长
-swigNum = 15;          % 单摆动周期插值点数
-stigNum = ksw*swigNum;  % 单支撑周期插值点数
-dt = igTend / swigNum;% 采样时间间隔
-SwigTimeSeq = linspace(0,igTend, swigNum)./igTend; % 单摆动周期的时间序列
-StigTimeSeq = linspace(0,igTend, stigNum)./igTend;
+% igTend = 1;           % 单摆动周期时长
+% swigNum = 15;          % 单摆动周期插值点数
+% stigNum = ksw*swigNum;  % 单支撑周期插值点数
+% dt = igTend / swigNum;% 采样时间间隔
+% SwigTimeSeq = linspace(0,igTend, swigNum)./igTend; % 单摆动周期的时间序列
+% StigTimeSeq = linspace(0,igTend, stigNum)./igTend;
+% 
+% % 【单摆动周期内的正弦函数】
+% Swz = stepHeight*sin(SwigTimeSeq.*pi);
+% Swx = SwigTimeSeq.*stepAmplitude*cos(Zrotate);
+% Swy = SwigTimeSeq.*stepAmplitude*sin(Zrotate);
+% % 【单支撑周期内的正弦函数】
+% Stz = zeros(1, length(StigTimeSeq));
+% Stx = fliplr(StigTimeSeq).*stepAmplitude*cos(Zrotate);
+% Sty = fliplr(StigTimeSeq).*stepAmplitude*sin(Zrotate);
 
-% 【单摆动周期内的正弦函数】
-Swz = stepHeight*sin(SwigTimeSeq.*pi);
-Swx = SwigTimeSeq.*stepAmplitude*cos(Zrotate);
-Swy = SwigTimeSeq.*stepAmplitude*sin(Zrotate);
+% new
+swigNum_sw = 50;          % 单摆动周期插值点数
+swigNum_up = 6;
+swigNum_down = 10;
+
+swigNum = swigNum_sw+swigNum_up+swigNum_down;
+stigNum = ksw*swigNum;  % 单支撑周期插值点数
+% 单摆动周期的时间序列
+SwigTimeSeq_sw = linspace(0,1, swigNum_sw); 
+SwigTimeSeq_up = linspace(0,1, swigNum_up);
+SwigTimeSeq_down = linspace(0,1, swigNum_down);
+% 单支撑周期的时间序列
+%     StigTimeSeq = linspace(0,1, stigNum);
+Gait_num = swigNum + stigNum;
+% 【单摆动周期内的正弦函数】  
+Swx = [0*ones(1,swigNum_up), stepAmplitude*cos(Zrotate)*0.5*(1-cos(SwigTimeSeq_sw.*pi)), stepAmplitude*cos(Zrotate)*ones(1,swigNum_down)];
+Swy = [0*ones(1,swigNum_up), stepAmplitude*sin(Zrotate)*0.5*(1-cos(SwigTimeSeq_sw.*pi)), stepAmplitude*sin(Zrotate)*ones(1,swigNum_down)];
+Swz = [2/3*stepHeight*SwigTimeSeq_up, 2/3*stepHeight + 1/3*stepHeight*sin(SwigTimeSeq_sw.*pi), 2/3*stepHeight*fliplr(SwigTimeSeq_down)];
 % 【单支撑周期内的正弦函数】
-Stz = zeros(1, length(StigTimeSeq));
-Stx = fliplr(StigTimeSeq).*stepAmplitude*cos(Zrotate);
-Sty = fliplr(StigTimeSeq).*stepAmplitude*sin(Zrotate);
+for i = 1:ksw
+    if i == 1
+        Stx = [stepAmplitude*cos(Zrotate)*(i-1)/ksw*ones(1,swigNum_down), stepAmplitude*cos(Zrotate)*i/ksw*0.5*(1-cos(SwigTimeSeq_sw.*pi)), stepAmplitude*cos(Zrotate)*i/ksw*ones(1,swigNum_up)];
+        Sty = [stepAmplitude*sin(Zrotate)*(i-1)/ksw*ones(1,swigNum_down), stepAmplitude*sin(Zrotate)*i/ksw*0.5*(1-cos(SwigTimeSeq_sw.*pi)), stepAmplitude*sin(Zrotate)*i/ksw*ones(1,swigNum_up)];
+    else
+        Stx = [Stx, [stepAmplitude*cos(Zrotate)*(i-1)/ksw*ones(1,swigNum_down), stepAmplitude*cos(Zrotate)*i/ksw*0.5*(1-cos(SwigTimeSeq_sw.*pi)), stepAmplitude*cos(Zrotate)*i/ksw*ones(1,swigNum_up)]];
+        Sty = [Sty, [stepAmplitude*sin(Zrotate)*(i-1)/ksw*ones(1,swigNum_down), stepAmplitude*sin(Zrotate)*i/ksw*0.5*(1-cos(SwigTimeSeq_sw.*pi)), stepAmplitude*sin(Zrotate)*i/ksw*ones(1,swigNum_up)]];
+    end
+end
+Stx = fliplr(Stx);
+Sty = fliplr(Sty);
+Stz = zeros(1, stigNum);
+
 
 %% 按相位差规划足端轨迹离散点
 leg_pos = cell(6,1);
@@ -93,9 +126,9 @@ for leg = 1:6
         end
     end
     % 足端相对于legbase的偏移量【可以与vrep通信读取】
-%     offset_x = cos(Alpha(leg))*BR+cos(Alpha(leg)+Theta1)*(LL1+LL2*cos(Theta2)+LL3*cos(Theta3+Theta2));
-%     offset_y = sin(Alpha(leg))*BR+sin(Alpha(leg)+Theta1)*(LL1+LL2*cos(Theta2)+LL3*cos(Theta3+Theta2));
-%     offset_z = 0;
+    offset_x = cos(Alpha(leg))*BR+cos(Alpha(leg)+Theta1)*(LL1+LL2*cos(Theta2)+LL3*cos(Theta3+Theta2));
+    offset_y = sin(Alpha(leg))*BR+sin(Alpha(leg)+Theta1)*(LL1+LL2*cos(Theta2)+LL3*cos(Theta3+Theta2));
+    offset_z = 0;
     % 一个步态周期的足端轨迹位置
     leg_pos{leg} = [offset_x+leg_x; offset_y+leg_y; offset_z+leg_z; pos_state];
 end
@@ -124,7 +157,11 @@ xlabel('x/m');
 ylabel('y/m');
 zlabel('z/m')
 legend('Leg1','Leg2','Leg3','Leg4','Leg5','Leg6');
-
+xlim([-0.7 0.7])
+ylim([-0.4 0.4])
+zlim([0 0.5])
+view([45,45])
+% 输入参数：0.2 0.5 20 3
 %% 存储各关节角度值
 % save(['Leg_Pos',num2str(gait_flag),'.mat'], 'leg_pos');
 % disp('***** 执行完毕！*****');
