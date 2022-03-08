@@ -65,9 +65,9 @@ ksw = round(floorfactor/dutyfactor);    % 放作摆动相的时间系数
 % Sty = fliplr(StigTimeSeq).*stepAmplitude*sin(Zrotate);
 
 % new
-swigNum_sw = 50;          % 单摆动周期插值点数
-swigNum_up = 6;
-swigNum_down = 10;
+swigNum_sw = 40;          % 单摆动周期插值点数
+swigNum_up = 30;
+swigNum_down = 30;
 
 swigNum = swigNum_sw+swigNum_up+swigNum_down;
 stigNum = ksw*swigNum;  % 单支撑周期插值点数
@@ -75,22 +75,22 @@ stigNum = ksw*swigNum;  % 单支撑周期插值点数
 SwigTimeSeq_sw = linspace(0,1, swigNum_sw); 
 SwigTimeSeq_up = linspace(0,1, swigNum_up);
 SwigTimeSeq_down = linspace(0,1, swigNum_down);
+SwigTimeSeq = linspace(0,1, swigNum);
 % 单支撑周期的时间序列
 %     StigTimeSeq = linspace(0,1, stigNum);
 Gait_num = swigNum + stigNum;
 % 【单摆动周期内的正弦函数】  
 Swx = [0*ones(1,swigNum_up), stepAmplitude*cos(Zrotate)*0.5*(1-cos(SwigTimeSeq_sw.*pi)), stepAmplitude*cos(Zrotate)*ones(1,swigNum_down)];
 Swy = [0*ones(1,swigNum_up), stepAmplitude*sin(Zrotate)*0.5*(1-cos(SwigTimeSeq_sw.*pi)), stepAmplitude*sin(Zrotate)*ones(1,swigNum_down)];
-Swz = [2/3*stepHeight*SwigTimeSeq_up, 2/3*stepHeight + 1/3*stepHeight*sin(SwigTimeSeq_sw.*pi), 2/3*stepHeight*fliplr(SwigTimeSeq_down)];
+Swz = stepHeight*(1-(0.5*(cos(SwigTimeSeq.*2*pi)+1)));
 % 【单支撑周期内的正弦函数】
-for i = 1:ksw
-    if i == 1
-        Stx = [stepAmplitude*cos(Zrotate)*(i-1)/ksw*ones(1,swigNum_down), stepAmplitude*cos(Zrotate)*i/ksw*0.5*(1-cos(SwigTimeSeq_sw.*pi)), stepAmplitude*cos(Zrotate)*i/ksw*ones(1,swigNum_up)];
-        Sty = [stepAmplitude*sin(Zrotate)*(i-1)/ksw*ones(1,swigNum_down), stepAmplitude*sin(Zrotate)*i/ksw*0.5*(1-cos(SwigTimeSeq_sw.*pi)), stepAmplitude*sin(Zrotate)*i/ksw*ones(1,swigNum_up)];
-    else
-        Stx = [Stx, [stepAmplitude*cos(Zrotate)*(i-1)/ksw*ones(1,swigNum_down), stepAmplitude*cos(Zrotate)*i/ksw*0.5*(1-cos(SwigTimeSeq_sw.*pi)), stepAmplitude*cos(Zrotate)*i/ksw*ones(1,swigNum_up)]];
-        Sty = [Sty, [stepAmplitude*sin(Zrotate)*(i-1)/ksw*ones(1,swigNum_down), stepAmplitude*sin(Zrotate)*i/ksw*0.5*(1-cos(SwigTimeSeq_sw.*pi)), stepAmplitude*sin(Zrotate)*i/ksw*ones(1,swigNum_up)]];
-    end
+stx = [zeros(1,swigNum_down), stepAmplitude*cos(Zrotate)*1/ksw*0.5*(1-cos(SwigTimeSeq_sw.*pi)), stepAmplitude*cos(Zrotate)*1/ksw*ones(1,swigNum_up)];
+sty = [zeros(1,swigNum_down), stepAmplitude*sin(Zrotate)*1/ksw*0.5*(1-cos(SwigTimeSeq_sw.*pi)), stepAmplitude*sin(Zrotate)*1/ksw*ones(1,swigNum_up)];
+Stx = stx;
+Sty = sty;
+for i = 1:ksw-1
+    Stx = [Stx, stx+stepAmplitude*cos(Zrotate)*i/ksw];
+    Sty = [Sty, sty+stepAmplitude*sin(Zrotate)*i/ksw];
 end
 Stx = fliplr(Stx);
 Sty = fliplr(Sty);
@@ -144,7 +144,7 @@ for L = 1 : 2
     hold on;
 end
 xlabel('Seq');
-ylabel('z/m');
+ylabel('/m');
 
 
 figure(2);
@@ -157,10 +157,10 @@ xlabel('x/m');
 ylabel('y/m');
 zlabel('z/m')
 legend('Leg1','Leg2','Leg3','Leg4','Leg5','Leg6');
-xlim([-0.7 0.7])
-ylim([-0.4 0.4])
-zlim([0 0.5])
-view([45,45])
+% xlim([-0.7 0.7])
+% ylim([-0.4 0.4])
+% zlim([0 0.5])
+% view([45,45])
 % 输入参数：0.2 0.5 20 3
 %% 存储各关节角度值
 % save(['Leg_Pos',num2str(gait_flag),'.mat'], 'leg_pos');

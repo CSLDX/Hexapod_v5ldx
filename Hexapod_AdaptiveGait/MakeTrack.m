@@ -269,8 +269,8 @@ function [Gait_num, Swpos, Stpos] = Generate_track2(stepHeight,stepAmplitude,ste
     ksw = round(floorfactor/dutyfactor);    % 放作摆动相的时间系数
 
     % 足端轨迹函数，离散化  4 6 10  //  4 2 2
-    swigNum_sw = 4;          % 单摆动周期插值点数
-    swigNum_up = 6;
+    swigNum_sw = 10;          % 单摆动周期插值点数
+    swigNum_up = 10;
     swigNum_down = 10;
     
     swigNum = swigNum_sw+swigNum_up+swigNum_down;
@@ -279,22 +279,22 @@ function [Gait_num, Swpos, Stpos] = Generate_track2(stepHeight,stepAmplitude,ste
     SwigTimeSeq_sw = linspace(0,1, swigNum_sw); 
     SwigTimeSeq_up = linspace(0,1, swigNum_up);
     SwigTimeSeq_down = linspace(0,1, swigNum_down);
+    SwigTimeSeq = linspace(0,1, swigNum);
     % 单支撑周期的时间序列
 %     StigTimeSeq = linspace(0,1, stigNum);
     Gait_num = swigNum + stigNum;
     % 【单摆动周期内的正弦函数】  
     Swpos(1,:) = [0*ones(1,swigNum_up), stepAmplitude*cos(stepRotate)*0.5*(1-cos(SwigTimeSeq_sw.*pi)), stepAmplitude*cos(stepRotate)*ones(1,swigNum_down)];
     Swpos(2,:) = [0*ones(1,swigNum_up), stepAmplitude*sin(stepRotate)*0.5*(1-cos(SwigTimeSeq_sw.*pi)), stepAmplitude*sin(stepRotate)*ones(1,swigNum_down)];
-    Swpos(3,:) = [2/3*stepHeight*SwigTimeSeq_up, 2/3*stepHeight + 1/3*stepHeight*sin(SwigTimeSeq_sw.*pi), 2/3*stepHeight*fliplr(SwigTimeSeq_down)];
+    Swpos(3,:) = stepHeight*(1-(0.5*(cos(SwigTimeSeq.*2*pi)+1)));
     % 【单支撑周期内的正弦函数】
-    for i = 1:ksw
-        if i == 1
-            Stx = [stepAmplitude*cos(stepRotate)*(i-1)/ksw*ones(1,swigNum_down), stepAmplitude*cos(stepRotate)*i/ksw*0.5*(1-cos(SwigTimeSeq_sw.*pi)), stepAmplitude*cos(stepRotate)*i/ksw*ones(1,swigNum_up)];
-            Sty = [stepAmplitude*sin(stepRotate)*(i-1)/ksw*ones(1,swigNum_down), stepAmplitude*sin(stepRotate)*i/ksw*0.5*(1-cos(SwigTimeSeq_sw.*pi)), stepAmplitude*sin(stepRotate)*i/ksw*ones(1,swigNum_up)];
-        else
-            Stx = [Stx, [stepAmplitude*cos(stepRotate)*(i-1)/ksw*ones(1,swigNum_down), stepAmplitude*cos(stepRotate)*i/ksw*0.5*(1-cos(SwigTimeSeq_sw.*pi)), stepAmplitude*cos(stepRotate)*i/ksw*ones(1,swigNum_up)]];
-            Sty = [Sty, [stepAmplitude*sin(stepRotate)*(i-1)/ksw*ones(1,swigNum_down), stepAmplitude*sin(stepRotate)*i/ksw*0.5*(1-cos(SwigTimeSeq_sw.*pi)), stepAmplitude*sin(stepRotate)*i/ksw*ones(1,swigNum_up)]];
-        end
+    stx = [zeros(1,swigNum_down), stepAmplitude*cos(stepRotate)*1/ksw*0.5*(1-cos(SwigTimeSeq_sw.*pi)), stepAmplitude*cos(stepRotate)*1/ksw*ones(1,swigNum_up)];
+    sty = [zeros(1,swigNum_down), stepAmplitude*sin(stepRotate)*1/ksw*0.5*(1-cos(SwigTimeSeq_sw.*pi)), stepAmplitude*sin(stepRotate)*1/ksw*ones(1,swigNum_up)];
+    Stx = stx;
+    Sty = sty;
+    for i = 1:ksw-1      
+        Stx = [Stx, stx+stepAmplitude*cos(stepRotate)*i/ksw];
+        Sty = [Sty, sty+stepAmplitude*sin(stepRotate)*i/ksw];
     end
     Stpos(1,:) = fliplr(Stx);
     Stpos(2,:) = fliplr(Sty);
@@ -322,9 +322,7 @@ function [T] = Trans_Matirx(offset,rot)
                0           0            1 offset(3);
                0           0            0 1
               ];
-    % 得到的是机身坐标系下腿部构成的平面在y-z和x-z平面上的倾角，按照姿态角旋转的先后顺序不同，在俯仰和翻滚上回有不同的误差
-    T = (trans_x*trans_y*trans_z+trans_y*trans_x*trans_z)/2;
-    
+    T = trans_z*trans_x*trans_y;
 end
 
 
