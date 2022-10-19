@@ -322,7 +322,7 @@ function [T] = Trans_Matirx(offset,rot)
                0           0            1 offset(3);
                0           0            0 1
               ];
-    T = trans_z*trans_x*trans_y;
+    T = trans_z*trans_y*trans_x;
 end
 
 
